@@ -33,14 +33,29 @@ function select!(df, s...)
     df
 end
 
+function rename!(df, s...)
+    selections = resolve_query(df, [s...])
+    selection_pairs = reduce_renames(postprocess(df, selections))
+    rename!(df, [k => f(k) for (k,f) in selection_pairs])
+    df
+end
+
+function rename(df, s...)
+    rename!(copy(df), s)
+end
 
 """
 ```
 select(df, s...) -> df
 select!(df, s...) -> df
+rename(df, s...) -> df
+rename!(df, s...) -> df
 ```
 
 Select, rename and reorder columns from `df`, a `DataFrame`.
+
+`select` can subset, reorder and rename columns.
+`rename` selects all columns in their original order, but can change column names.
 
 All other arguments besides the first one will be interpreted as `Selection`s, those can be:
 * of type `Symbol` -- Select a column by name
@@ -79,4 +94,4 @@ or columns:
 
 See also: [`if_keys`](@ref), [`if_values`](@ref), [`key_map`](@ref), [`rest`](@ref)
 """
-select, select!
+select, select!, rename, rename!

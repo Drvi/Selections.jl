@@ -134,7 +134,6 @@ OrMultiSelection(s1, s2) = OrMultiSelection(s1, s2, true)
 (|)(s1::Vector{S}, s2::T) where S <: AbstractSelection where T <: AbstractSelection = OrMultiSelection(s1, s2)
 (|)(s1::S, s2::Vector{T}) where S <: AbstractSelection where T <: AbstractSelection = OrMultiSelection(s1, s2)
 (|)(s1::Vector{S}, s2::Vector{T}) where S <: AbstractSelection where T <: AbstractSelection = OrMultiSelection(s1, s2)
-
 # This is type piracy
 (|)(s1, s2::Pair{S,<:RenameTarget}) where S = OrMultiSelection(selection(s1), s2)
 (|)(s1::Pair{S,<:RenameTarget}, s2) where S = OrMultiSelection(s1, selection(s2))
