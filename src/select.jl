@@ -14,8 +14,10 @@ end
 postprocess(df, s::SymbolSelection) = [s.s => s.r]
 postprocess(df, selections::Complement) = resolve_complement(selections, names(df))
 
-select(df) = error("Cannot call `select(df)` without any additional arguments for selection.")
-select!(df) = error("Cannot call `select!(df)` without any additional arguments for selection.")
+select(df) = throw(MethodError("Cannot call `select(df)` without any additional arguments for selection."))
+select!(df) = throw(MethodError("Cannot call `select!(df)` without any additional arguments for selection."))
+rename(df) = throw(MethodError("Cannot call `rename(df)` without any additional arguments for selection."))
+rename!(df) = throw(MethodError("Cannot call `rename!(df)` without any additional arguments for selection."))
 
 function select(df, s...)
     selections = resolve_query(df, [s...])
@@ -28,8 +30,9 @@ end
 function select!(df, s...)
     selections = resolve_query(df, [s...])
     selection_pairs = reduce_renames(postprocess(df, selections))
-    delete!(df, setdiff(names(df), first.(selection_pairs)))
-    rename!(out, [k => f(k) for (k,f) in selection_pairs])
+    # TODO: replace with DataFrames.select! contents to emulate former delete! method
+    DataFrames.select!(df, first.(selection_pairs))
+    rename!(df, [k => f(k) for (k,f) in selection_pairs])
     df
 end
 

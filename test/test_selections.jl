@@ -29,9 +29,9 @@ allt = (k,v) -> true
 end
 
 @testset "selection errors" begin
-@test_throws AssertionError colrange(0, 1)
-@test_throws AssertionError colrange(-3, -1)
-@test_throws AssertionError colrange(-1, 1)
+@test_throws ArgumentError colrange(0, 1)
+@test_throws ArgumentError colrange(-3, -1)
+@test_throws ArgumentError colrange(-1, 1)
 @test_throws ArgumentError s.selection(-3:-1:-1)
 @test_throws ArgumentError s.selection(3:1:1)
 @test_throws MethodError s.selection("a")
@@ -172,7 +172,7 @@ end
 @test s.selection([:a, rest(), :c1]) == [s.SymbolSelection(:a), s.Complement(s.SelectionRename(identity), identity), s.SymbolSelection(:c1)]
 @test s.selection(rest() => :A) == (s.Complement(s.SelectionRename(identity), identity) => :A)
 @test s.selection([rest() => :A, :a => :AA]) == [s.Complement(s.SelectionRename(identity), identity) => :A, s.SymbolSelection(:a) => :AA]
-@test_throws ErrorException s.selection(-rest())
+@test_throws MethodError s.selection(-rest())
 @test s.selection(rest() => key_map(uppercase)) == s.Complement(s.SelectionRename(uppercase), identity)
 @test s.selection([rest() => key_map(uppercase), :a => key_map(uppercase)]) == [s.Complement(s.SelectionRename(identity), identity) => key_map(uppercase), s.SymbolSelection(:a) => key_map(uppercase)]
 end

@@ -82,7 +82,7 @@ end
 
 function resolve(df, s::SymbolSelection)
     if !(s.s in names(df))
-        error("column `$(s.s)` is not present in this $(typeof(df)).")
+        throw(KeyError("column `$(s.s)` is not present in this $(typeof(df))."))
     else
         positiveselection(df, s, bool(s))
     end
@@ -90,7 +90,7 @@ end
 
 function resolve(df, s::IntSelection)
     if length(names(df)) < s.s
-        error("index $(s.s) is out of bounds for this $(typeof(df)) with $(length(names(df))) columns.")
+        throw(BoundsError("index $(s.s) is out of bounds for this $(typeof(df)) with $(length(names(df))) columns."))
     else
         positiveselection(df, names(df)[s.s], bool(s))
     end
@@ -98,7 +98,7 @@ end
 
 function resolve(df, s::BoolSelection)
     if length(names(df)) != length(s.s)
-        error("$(typeof(s.s)) is length $(length(s.s)), but the $(typeof(df)) has $(length(names(df))) columns.")
+        throw(BoundsError("$(typeof(s.s)) is length $(length(s.s)), but the $(typeof(df)) has $(length(names(df))) columns."))
     else
         positiveselection(df, s.s, s.b)
     end
@@ -107,10 +107,10 @@ end
 function resolve(df, s::RangeSelection{<:Symbol})
     s1, s2 = s.s1, s.s2
     i = findfirst(x -> x == s1, names(df))
-    j = findfirst(x -> x == s2, names(df))
+    i == nothing && throw(KeyError("column `$(s1)` is not present in this $(typeof(df))."))
 
-    i == nothing && error("column `$(s1)` is not present in this $(typeof(df)).")
-    j == nothing && error("column `$(s2)` is not present in this $(typeof(df)).")
+    j = findfirst(x -> x == s2, names(df))
+    j == nothing && throw(KeyError("column `$(s2)` is not present in this $(typeof(df))."))
 
     idx = i > j ? reverse(j:s.step:i) : i:s.step:j
     positiveselection(df, names(df)[idx], bool(s))
@@ -118,7 +118,7 @@ end
 
 function resolve(df, s::RangeSelection{<:Int})
     s1, s2 = s.s1, s.s2
-    @assert s1 >= 1 & s2 <= length(names(df))
+    !(s1 >= 1 & s2 <= length(names(df))) && throw(BoundsError())
     idx = s1 > s2 ? reverse(s2:abs(s.step):s1) : s1:s.step:s2
     positiveselection(df, names(df)[idx], bool(s))
 end

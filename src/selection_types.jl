@@ -24,10 +24,10 @@ struct Complement{F1,F2} <: AbstractSymbolSelection where F1 <: AbstractSelectio
     f1::F1
     f2::F2
 end
-(&)(s1::Complement, s2) = error("rest() cannot be explicitly chained by `&`, just supply as another argument to select().")
-(&)(s1, s2::Complement) = error("rest() cannot be explicitly chained by `&`, just supply as another argument to select().")
+(&)(s1::Complement, s2) = throw(MethodError("rest() cannot be explicitly chained by `&`, just supply as another argument to select()."))
+(&)(s1, s2::Complement) = throw(MethodError("rest() cannot be explicitly chained by `&`, just supply as another argument to select()."))
 rest() = Complement(key_map(identity), identity)
-(-)(x::Complement) = error("rest() cannot be negated.")
+(-)(x::Complement) = throw(MethodError("rest() cannot be negated."))
 bool(s::Complement) = true
 getname(s::Complement) = s
 getnames(s::Complement) = [s]
@@ -48,9 +48,9 @@ getnames(s::Vector{<:AbstractSymbolSelection}) = getname.(s)
 struct IntSelection <: AbstractSelection
     s::Int
     b::Bool
-    IntSelection(s, b) = s == 0 ? error("Zero is not a valid column index.") : new(abs(s), b)
+    IntSelection(s, b) = s == 0 ? throw(ArgumentError("Zero is not a valid column index.")) : new(abs(s), b)
 end
-IntSelection(s::Int) = s == 0 ? error("Zero is not a valid column index.") : IntSelection(abs(s), s > 0)
+IntSelection(s::Int) = s == 0 ? throw(ArgumentError("Zero is not a valid column index.")) : IntSelection(abs(s), s > 0)
 (-)(s::IntSelection) = IntSelection(s.s, !s.b)
 
 
@@ -67,7 +67,10 @@ struct RangeSelection{T} <: AbstractSelection  where T <: Union{Int,Symbol}
     step::Int
     b::Bool
     function RangeSelection(s1::Int, s2::Int, step::Int, b::Bool)
-        @assert sign(s1) == sign(s2) == 1 && ((s2 > s1 && sign(step)) == 1 || (s1 > s2 && sign(step)) == -1 || (s1 == s2 && sign(step) != 0)) "The range used for selection ($(s1):$(step):$(s2)) must be non-empty and non-crossing zero."
+        if !(sign(s1) == sign(s2) == 1 && ((s2 > s1 && sign(step)) == 1 || (s1 > s2 && sign(step)) == -1 || (s1 == s2 && sign(step) != 0)))
+            throw(ArgumentError("The range used for selection ($(s1):$(step):$(s2)) must be non-empty and non-crossing zero."))
+        end
+
         sign(s1) == 1 ? new{Int}(s1, s2, step, b) : new{Int}(abs(s1), abs(s2), abs(step), b)
     end
     RangeSelection(s1::Symbol, s2::Symbol, step::Int, b::Bool) = new{Symbol}(s1, s2, step, b)
@@ -82,7 +85,11 @@ end
 function RangeSelection(x::Union{StepRange{Int,Int},UnitRange{Int}})
     lo,hi = extrema(x)
     range_sign = sign(lo)
-    @assert lo != 0 && hi != 0 && length(x) > 0 && range_sign == sign(hi) "The range used for selection ($(x)) must be non-empty and non-crossing zero."
+
+    if !(lo != 0 && hi != 0 && length(x) > 0 && range_sign == sign(hi))
+        throw(ArgumentError("The range used for selection ($(x)) must be non-empty and non-crossing zero."))
+    end
+
     if (range_sign == 1)
         RangeSelection(x[1], x[end], step(x), true)
     else

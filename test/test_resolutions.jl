@@ -1,6 +1,4 @@
 
-df = DataFrame(a = 1:4, b = 'a':'d', c1 = [[float(i)] for i in 1:4])
-
 ssa = s.SymbolSelection(:a)
 ssb = s.SymbolSelection(:b)
 ssc = s.SymbolSelection(:c1)
