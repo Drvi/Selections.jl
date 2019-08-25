@@ -3,6 +3,7 @@ module Selections
     using DataFrames
     import Base: &, -, |, !, ~, iterate
     export select, select!,
+           rename, rename!,
            cols, not,
            if_matches, if_keys, if_values, if_pairs, if_eltype, colrange,
            rest,
