@@ -4,8 +4,8 @@ df = DataFrame(a = 1:4, b = 'a':'d', c1 = [[float(i)] for i in 1:4])
 function test_renaming_queries(section, queries)
     @testset "$section" begin
         @testset "queries" begin
-            for (s, res) in queries
-                eval(:(@test select(df, $s...) == rename(df[$(first.(res))], $(res...))))
+            for (sel, res) in queries
+                eval(:(@test s.select(df, $sel...) == s.rename(df[:, $(first.(res))], $(res...))))
             end
         end
     end
@@ -14,8 +14,8 @@ end
 function test_queries(section, queries)
     @testset "$section" begin
         @testset "queries" begin
-            for (s, res) in queries
-                eval(:(@test select(df, $s...) == df[$res]))
+            for (sel, res) in queries
+                eval(:(@test s.select(df, $sel...) == df[:, $res]))
             end
         end
     end
@@ -24,20 +24,17 @@ end
 function test_queries_and_errors(section, queries, errors)
     @testset "$section" begin
         @testset "queries" begin
-            for (s, res) in queries
-                eval(:(@test select(df, $s...) == df[$res]))
+            for (sel, res) in queries
+                eval(:(@test s.select(df, $sel...) == df[:, $res]))
             end
         end
         @testset "errors" begin
-            for (s, res) in errors
-                eval(:(@test_throws $res select(df, $s...)))
+            for (sel, res) in errors
+                eval(:(@test_throws $res s.select(df, $sel...)))
             end
         end
     end
 end
-
-# const dt = Table(a = 1:4, b = 'a':'d', c = [[float(i)] for i in 1:4])
-# const ft = FlexTable(a = 1:4, b = 'a':'d', c = [[float(i)] for i in 1:4])
 
 symbol_queries = [:(:a,) => [:a], :(-cols(:b),) => [:a, :c1], :(not(:c1),) => [:a, :b], :(not(:a, :b, :c1),) => [],
                   :(:b, :a) => [:b, :a], :((:b, :a)) => [:b, :a], :(-cols(:b, :c1),) => [:a],  :(not(:b, :c1),) => [:a],
