@@ -127,9 +127,9 @@ resolve(df, s::PositiveSelectionArray) = bool(s) ? s : PositiveSelectionArray(se
 resolve(df, s::AbstractArray) = length(s) == 1 ? resolve(df, selection(s[1])) : resolve.((df,), selection(s))
 resolve(df, s::Tuple) = length(s) == 1 ? resolve(df, selection(s[1])) : resolve.((df,), selection(s))
 resolve(df, s::Complement) = s
-resolve(df, s::PredicateSelection) = positiveselection(df, x -> s.f(df[x]), bool(s))
+resolve(df, s::PredicateSelection) = positiveselection(df, x -> s.f(df[!, x]), bool(s))
 resolve(df, s::NamePredicateSelection) = positiveselection(df, x -> s.f(string(x)), bool(s))
-resolve(df, s::PairPredicateSelection) = positiveselection(df, x -> s.f(string(x), df[x]), bool(s))
+resolve(df, s::PairPredicateSelection) = positiveselection(df, x -> s.f(string(x), df[!, x]), bool(s))
 
 function resolve_complement(c::Complement, complement_names::Vector{Symbol})
     complement_names .=> (c.f1,)

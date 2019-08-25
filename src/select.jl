@@ -20,7 +20,7 @@ select!(df) = error("Cannot call `select!(df)` without any additional arguments 
 function select(df, s...)
     selections = resolve_query(df, [s...])
     selection_pairs = reduce_renames(postprocess(df, selections))
-    out = df[[k for (k,f) in selection_pairs]]
+    out = df[:, [k for (k,f) in selection_pairs]]
     rename!(out, [k => f(k) for (k,f) in selection_pairs])
     out
 end
@@ -36,7 +36,8 @@ end
 function rename!(df, s...)
     selections = resolve_query(df, [s...])
     selection_pairs = reduce_renames(postprocess(df, selections))
-    rename!(df, [k => f(k) for (k,f) in selection_pairs])
+    # TODO: replace with DataFrames.rename! contents to avoid inifite recursion
+    DataFrames.rename!(df, [k => f(k) for (k,f) in selection_pairs])
     df
 end
 
