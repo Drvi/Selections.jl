@@ -101,7 +101,7 @@ select(df, not(1, 2))
 select(df, -colrange(1, 2))
 select(df, -cols(1) & -cols(2))
 ```
-The `not()` wrapper is like `cols()` but it *negates* all its inputs and it resolves them with `&`. The new query then says "select all columns whose index is not 1" *and* "select all columns whose index is not 1", which is what we wanted.
+The `not()` wrapper is like `cols()` but it *negates* all its inputs and it resolves them with `&`. The new query then says "select all columns whose index is not 1" *and* "select all columns whose index is not 2", which is what we wanted.
 
 
 ```julia
