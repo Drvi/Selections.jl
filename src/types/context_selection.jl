@@ -1,6 +1,8 @@
 for (T, f) in ((:OtherSelection, :other_cols), (:ElseSelection, :else_cols), (:AllSelection, :all_cols))
     @eval begin
-        struct $(T) <: AbstractContextSelection; end
+        struct $(T){F} <: AbstractContextSelection{F} where F <: Callable;
+            s::F 
+        end
         $(f)() = $(T)()
         (-)(x::$(T)) = throw(ArgumentError(string($(f), "() cannot be negated.")))
         bool(s::$(T)) = true

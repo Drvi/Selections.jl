@@ -1,134 +1,109 @@
-struct SymbolSelection <: AbstractSelection
+# add r and t field to all abstract selections
+struct SymbolSelection{R,T} <: AbstractSelection{R,T}
     s::Symbol
     b::Bool
-    SymbolSelection(s::Symbol, b::Bool) = new(s, b)
+    r::R
+    t::T
+    SymbolSelection(s::Symbol, b::Bool=true, r::R=nothing, t::T=nothing) = new{R,T}(s, b, r, t)
 end
-SymbolSelection(s::Symbol) = SymbolSelection(s, true)
-SymbolSelection(s::Vector{Symbol}) = SymbolSelection.(s)
-(-)(s::SymbolSelection) = SymbolSelection(s.s, !s.b)
 
-struct IntSelection <: AbstractSelection
+struct IntSelection{R,T} <: AbstractSelection{R,T}
     s::Int
     b::Bool
-    function IntSelection(s::Int, b::Bool)
-        if s == 0
-            throw(ArgumentError("Zero is not a valid column index."))
+    r::R
+    t::T
+    function IntSelection(s::Int, b::Bool=true, r::R=nothing, t::T=nothing) where {R,T}
+        if s <= 0
+            throw(ArgumentError("Non-positive integers are not valid column indices."))
         else
-            new(abs(s), b)
+            new{R,T}(s, b, r, t)
         end
     end
 end
-function IntSelection(s::Int)
-    if s == 0
-        throw(ArgumentError("Zero is not a valid column index."))
-    else
-        IntSelection(abs(s), s > 0)
-    end
-end
-(-)(s::IntSelection) = IntSelection(s.s, !s.b)
 
-struct BoolSelection <: AbstractSelection
+struct BoolSelection{R,T} <: AbstractSelection{R,T}
     s::AbstractArray{Bool}
     b::Bool
+    r::R
+    t::T
+    function BoolSelection(s::AbstractArray{Bool}, b::Bool=true, r::R=nothing, t::T=nothing) where {R,T}
+        new{R,T}(s, b, r, t)
+    end
 end
-BoolSelection(s::AbstractArray{Bool}) = BoolSelection(s, true)
-(-)(s::BoolSelection) = BoolSelection(s.s, !s.b)
 
-struct RangeSelection{T} <: AbstractSelection where T <: Union{Int,Symbol}
-    s1::T
-    s2::T
+# TODO: negative integers are not allowed
+struct RangeSelection{S,R,T} <: AbstractSelection{R,T} where S <: Union{Int,Symbol}
+    start::S
+    stop::S
     step::Int
     b::Bool
-    function RangeSelection(s1::Int, s2::Int, step::Int, b::Bool)
-        if !(sign(s1) == sign(s2) == 1 && ((s2 > s1 && sign(step)) == 1 || (s1 > s2 && sign(step)) == -1 || (s1 == s2 && sign(step) != 0)))
-            throw(ArgumentError("The range used for selection ($(s1):$(step):$(s2)) must be non-empty and non-crossing zero."))
+    r::R
+    t::T
+    function RangeSelection(start::S, stop::S, step::S=one(S), b::Bool=true, r::R=nothing, t::T=nothing) where {S<:Integer,R,T}
+        if start <= 0 && stop <= 0
+            throw(ArgumentError("Non-positive integers are not valid column indices."))
         end
-
-        sign(s1) == 1 ? new{Int}(s1, s2, step, b) : new{Int}(abs(s1), abs(s2), abs(step), b)
+        new{S,R,T}(start, stop, step, b, r, t)
     end
-    RangeSelection(s1::Symbol, s2::Symbol, step::Int, b::Bool) = new{Symbol}(s1, s2, step, b)
+    function RangeSelection(start::Symbol, stop::Symbol, step::S=1, b::Bool=true, r::R=nothing, t::T=nothing) where {S<:Integer,R,T}
+        new{S,R,T}(start, stop, step, b, r, t)
+    end
 end
-(-)(s::RangeSelection) = RangeSelection(s.s1, s.s2, s.step, !bool(s))
-colrange(s1::Symbol, s2::Symbol; by::Int=1) = RangeSelection(s1, s2, by, true)
-colrange(s1::Int, s2::Int; by::Int=1) = RangeSelection(s1, s2, (s1 > s2 ? -1 : 1) * abs(by), true)
-Base.show(io::IO, s::RangeSelection) = (!bool(s) && print(io, "-"); print(io, "RangeSelection(", s.s1, ":", s.step == 1 ? "" : "$(s.step):", s.s2, ")"))
-
 function RangeSelection(x::AbstractRange)
-    RangeSelection(x[1], x[end], step(x), true)
+    RangeSelection(x.start, x.stop, step(x), true, nothing, nothing)
 end
-function RangeSelection(x::Union{StepRange{Int,Int},UnitRange{Int}})
-    lo,hi = extrema(x)
-    range_sign = sign(lo)
+params(s::RangeSelection) = (s.start, s.stop, s.step)
+cols_range(start::S, stop::S; step::S=one(S)) where {S<:Integer} = RangeSelection(start, stop, step)
+cols_range(start::Symbol, stop::Symbol; step::S=1) where {S<:Integer} = RangeSelection(start, stop, step)
+Base.show(io::IO, s::RangeSelection) = (!bool(s) && print(io, "-"); print(io, "RangeSelection(", s.start, ":", s.step == 1 ? "" : "$(s.step):", s.stop, ")"))
 
-    if !(lo != 0 && hi != 0 && length(x) > 0 && range_sign == sign(hi))
-        throw(ArgumentError("The range used for selection ($(x)) must be non-empty and non-crossing zero."))
-    end
-
-    if (range_sign == 1)
-        RangeSelection(x[1], x[end], step(x), true)
-    else
-        RangeSelection(abs(hi), abs(lo), abs(step(x)), false)
-    end
-end
-
-struct ArraySelection{S} <: AbstractSelection where T <: Union{Int,Symbol}
+struct ArraySelection{S,R,T} <: AbstractSelection{R,T} where T <: Union{Int,Symbol}
     s::Vector{S}
     b::Bool
-    ArraySelection(s::AbstractVector{S}, b::Bool) where S <: Union{Int,Symbol} = new{S}(unique(s), b)
-    ArraySelection(s::Tuple{Vararg{S}}, b::Bool) where S <: Union{Int,Symbol} = new{S}(collect(unique(s)), b)
+    r::R
+    t::T
+    function ArraySelection(s::AbstractVector{S}, b::Bool=true, r::R=nothing, t::T=nothing) where {S<:Union{Int,Symbol},R,T}
+        new{S,R,T}(unique(s), b, r, t)
+    end
 end
-ArraySelection(s) = ArraySelection(s, true)
-(-)(x::ArraySelection) = ArraySelection(x.s, !x.b)
+ArraySelection(s::Tuple{Vararg{S}}, b::Bool=true, r::R=nothing, t::T=nothing) where {S<:Union{Int,Symbol},R,T} =
+    ArraySelection(collect(unique(s)), b, r, t)
 
-
-struct KeyPredicateSelection{F} <: AbstractSelection where F <: Callable
+struct PairsPredicateSelection{F,R,T}} <: AbstractSelection where F <: Callable
     f::F
     b::Bool
+    r::R
+    t::T
+    PairsPredicateSelection(f::F, b::Bool=true, r::R=nothing, t::T=nothing) where {F<:Callable,R,T} =
+        new{F,R,T}(f, b, r, t)
 end
-if_keys(f::Callable) = KeyPredicateSelection(f, true)
-if_matches(s::S) where S <: Union{Regex,AbstractString,Char} = if_keys(x -> occursin(s, string(x)))
-(-)(x::KeyPredicateSelection) = KeyPredicateSelection(x.f, !x.b)
+params(s::PairsPredicateSelection) = (s.f,)
 
-struct PredicateSelection{F} <: AbstractSelection where F <: Callable
-    f::F
-    b::Bool
-end
-if_values(f::Callable) = PredicateSelection(f, true)
-if_eltype(t::DataType) = if_values(x -> eltype(x) <: t || eltype(x) <: Union{Missing, t})
-(-)(x::PredicateSelection) = PredicateSelection(x.f, !x.b)
+selection(x::Symbol, b::Bool=true) = SymbolSelection(x, b)
+selection(x::Int, b::Bool=true) = IntSelection(x, b)
+selection(x::AbstractVector{Bool}, b::Bool=true) = BoolSelection(x, b)
+selection(x::StepRange{Int,Int}, b::Bool=true) = RangeSelection(x, b)
+selection(x::UnitRange{Int}, b::Bool=true) = RangeSelection(x, b)
+selection(x::AbstractVector{S}, b::Bool=true) where {S<:Union{Int,Symbol}} = ArraySelection(x, b)
+selection(x::AbstractVector, b::Bool=true) = isempty(x) ? ArraySelection(Symbol[], b) : cols(x...)
+selection(x::Tuple{Vararg{S}}, b::Bool=true) where {S<:Union{Int,Symbol}} = ArraySelection(x, b)
+selection(x::Tuple, b::Bool=true) = isempty(x) ? ArraySelection(Symbol[], b) : cols(x...)
+selection(x::Union{Regex,AbstractString,Char}, b::Bool=true) = PairsPredicateSelection((k,v) -> occursin(x, string(k)), b)
+selection(x::DataType, b::Bool=true) = PairsPredicateSelection((k,v) -> eltype(v) <: x || eltype(v) <: Union{Missing, t}, b)
+selection(x::Callable, b::Bool=true) = PairsPredicateSelection(x, b)
+selection(x::AbstractSelection, b::Bool=true) = x
+selection(x::SelectionQuery, b::Bool=true) = x
+selection(x::SelectionPlan, b::Bool=true) = x
 
-struct PairPredicateSelection{F} <: AbstractSelection where F <: Callable
-    f::F
-    b::Bool
-end
-if_pairs(f::Callable) = PairPredicateSelection(f, true)
-(-)(x::PairPredicateSelection) = PairPredicateSelection(x.f, !x.b)
+# not(s...; alias, trans)
+cols() = all_cols()
+cols(s) = selection(s, true)
+cols(s...) = mapfoldl(cols, OrSelection, [s...])
 
-selection(x::Symbol) = SymbolSelection(x)
-selection(x::Int) = IntSelection(x)
-selection(x::AbstractVector{Bool}) = BoolSelection(x)
-selection(x::StepRange{Int,Int}) = RangeSelection(x)
-selection(x::UnitRange{Int}) = RangeSelection(x)
-selection(x::AbstractVector{S}) where {S<:Union{Int,Symbol}} = ArraySelection(x)
-selection(x::AbstractVector) = isempty(x) ? ArraySelection(Symbol[]) : cols(x...)
-selection(x::Tuple{Vararg{S}}) where {S<:Union{Int,Symbol}} = ArraySelection(x)
-selection(x::Tuple) = isempty(x) ? ArraySelection(Symbol[]) : cols(x...)
-selection(x::Regex) = if_matches(x)
-selection(x::DataType) = if_eltype(x)
-selection(x::AbstractSelection) = x
-selection(x::SelectionQuery) = x
-selection(x::SelectionResult) = x
-
-
-col(x) = selection(x)
-
-cols() = throw(MethodError(cols, ()))
-cols(s) = selection(s)
-cols(s...) = mapfoldl(selection, OrSelection, [s...])
-
+# not(s...; alias, trans)
 not() = throw(MethodError(not, ()))
-not(x::Pair) = -selection(first(x)) => last(x)
-not(s) = -selection(s)
+not(s) = selection(s, false)
+not(p::Pair) = not(first(p)) => last(p)
 not(s...) = mapfoldl(not, AndSelection, [s...])
 
 

@@ -43,73 +43,64 @@ Base.iterate(s::SelectionTerm) = (colname(s), (keyfunc(s), valfunc(s)))
 Base.iterate(s::SelectionTerm, state) = (first(state), Base.tail(state))
 Base.iterate(s::SelectionTerm, ::Type{Tuple}) = nothing
 
-struct SelectionResult{S} <: AbstractVector{S}
+struct SelectionPlan{S} <: AbstractVector{S}
     s::Vector{S}
-    SelectionResult(s::AbstractVector{S}) where {S<:SelectionTerm} = new{S}(collect(s))
+    SelectionPlan(s::AbstractVector{S}) where {S<:SelectionTerm} = new{S}(collect(s))
 end
-Base.size(s::SelectionResult) = size(s.s)
-Base.getindex(s::SelectionResult, i) = getindex(s.s, i)
-Base.iterate(x::SelectionResult) = iterate(x.s)
-Base.iterate(x::SelectionResult, state) = iterate(x.s, state)
-function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, s::SelectionResult)
-    print(io, length(s.s), "-element SelectionResult\n")
+Base.size(s::SelectionPlan) = size(s.s)
+Base.getindex(s::SelectionPlan, i) = getindex(s.s, i)
+Base.iterate(x::SelectionPlan) = iterate(x.s)
+Base.iterate(x::SelectionPlan, state) = iterate(x.s, state)
+function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, s::SelectionPlan)
+    print(io, length(s.s), "-element SelectionPlan\n")
     foreach(x->println(io, " ", x), s.s)
 end
 
-function SelectionResult(xs::Vector{S}, r::RenamingSymbols, t::MaybeTrans) where {
+function SelectionPlan(xs::Vector{S}, r::RenamingSymbols, t::MaybeTrans) where {
         S <: Union{Symbol,OtherSelection,ElseSelection}
     }
     if length(xs) == length(r.s)
-        SelectionResult([
+        SelectionPlan([
             SelectionTerm(x, Composition(RenamingSymbol(s)), Composition(t))
             for (x, s)
             in zip(xs, r.s)
         ])
     else
         @warn("Renaming array had different length ($(length(r.s))) than target selections ($(length(xs))), renaming skipped.")
-        SelectionResult([SelectionTerm(x, nothing, Composition(t)) for x in xs])
+        SelectionPlan([SelectionTerm(x, nothing, Composition(t)) for x in xs])
     end
 end
 
-function SelectionResult(xs::Vector{S}, r::MaybeRenaming, t::MaybeTrans) where {
+function SelectionPlan(xs::Vector{S}, r::MaybeRenaming, t::MaybeTrans) where {
         S <: Union{Symbol,OtherSelection,ElseSelection}
     }
-    SelectionResult([SelectionTerm(x, Composition(r), Composition(t)) for x in xs])
+    SelectionPlan([SelectionTerm(x, Composition(r), Composition(t)) for x in xs])
 end
-function SelectionResult(xs::Vector{S}, r::Union{Composition, MaybeRenaming}, t::Union{Composition, MaybeTrans}) where {
+function SelectionPlan(xs::Vector{S}, r::Union{Composition, MaybeRenaming}, t::Union{Composition, MaybeTrans}) where {
         S <: Union{Symbol,OtherSelection,ElseSelection}
     }
-    SelectionResult([SelectionTerm(x, Composition(r), Composition(t)) for x in xs])
-end
-
-function SelectionResult(x::S, r::MaybeRenaming, t::MaybeTrans) where {
-        S <: Union{Symbol,OtherSelection,ElseSelection}
-    }
-    SelectionResult([SelectionTerm(x, Composition(r), Composition(t))])
+    SelectionPlan([SelectionTerm(x, Composition(r), Composition(t)) for x in xs])
 end
 
-function SelectionResult(
+function SelectionPlan(x::S, r::MaybeRenaming, t::MaybeTrans) where {
+        S <: Union{Symbol,OtherSelection,ElseSelection}
+    }
+    SelectionPlan([SelectionTerm(x, Composition(r), Composition(t))])
+end
+
+function SelectionPlan(
         xs::AbstractVector{S},
         rs::AbstractVector{<:MaybeComp},
         ts::AbstractVector{<:MaybeComp}) where {
         S <: Union{Symbol,OtherSelection,ElseSelection}
     }
-    SelectionResult([SelectionTerm(x, r, t) for (x, r, t) in zip(xs, rs, ts)])
+    SelectionPlan([SelectionTerm(x, r, t) for (x, r, t) in zip(xs, rs, ts)])
 end
 
-function SelectionResult(xs::SelectionResult, rn::MaybeRenaming, tn::MaybeTrans)
-    SelectionResult([SelectionTerm(x, extend(r, rn), extend(t, tn)) for (x, r, t) in xs])
+function SelectionPlan(xs::SelectionPlan, rn::MaybeRenaming, tn::MaybeTrans)
+    SelectionPlan([SelectionTerm(x, extend(r, rn), extend(t, tn)) for (x, r, t) in xs])
 end
 
-colnames(x::SelectionResult) = map(colname, x)
-keyfuncs(x::SelectionResult) = map(keyfunc, x)
-valfuncs(x::SelectionResult) = map(valfunc, x)
-
-
-Base.show(io::IO, s::SelectionQuery) = (print(io, "SelectionQuery("); _print_srt(io, s); print(io, ")"))
-Base.show(io::IO, s::SelectionTerm) = (print(io, "SelectionTerm("); _print_srt(io, s); print(io, ")"))
-function _print_srt(io::IO, s)
-    print(io, s.s isa Symbol ? ":" : "", s.s)
-    isnothing(s.r) || print(io, " => ", s.r)
-    isnothing(s.t) || print(io, " => ", s.t)
-end
+colnames(x::SelectionPlan) = map(colname, x)
+keyfuncs(x::SelectionPlan) = map(keyfunc, x)
+valfuncs(x::SelectionPlan) = map(valfunc, x)

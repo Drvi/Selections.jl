@@ -115,7 +115,7 @@ What follows is a short reference of the exported functions.
 | `1`                                                     | the first column
 | `:a`                                                    | the column `:a`
 | `cols(:a, :b)`  # or  `cols(:a) \| cols(:b)`            | the columns `:a` and `:b`
-| `not(:a, :b)`  # or  `-cols(:a) & -cols(:b)`            | the columns other than `:a` and `:b`
+| `not(:a, :b)`  # or  `!cols(:a) & !cols(:b)`            | the columns other than `:a` and `:b`
 | `1:2:3`                                                 | the first and third columns
 | `colrange(:d, :a, 2)`                                   | every other column between `:d` and `:a`
 | `[true, false, true]`                                   | the first and third columns
@@ -125,11 +125,10 @@ What follows is a short reference of the exported functions.
 | `if_matches(r"\d")`  # or just `r"\d"`                  | column whose name contains a digit
 | `if_pairs((k,v) -> occursin("id", k) && minimum(v) > 0)` | columns whose names contains "id" and that also have a positive minimum values
 
-All these selections can be inverted/negated with a minus sign or a `not()` function so that they match the complement of the columns they would match otherwise. There are also special selections like `all_cols()`, `other_cols()` (the columns that were not selected in any other part of the selection query) and `else_cols()` (the columns that the previous selection query didn't capture).
+All these selections can be inverted with a `!` or a `not()` function so that they match the complement of the columns they would match otherwise. There are also special selections like `all_cols()`, `other_cols()` (the columns that were not selected in any other part of the selection query) and `else_cols()` (the columns that the previous selection query didn't capture).
 
 The thing to remember about chaining selections is that they behave according to as boolean operators applied to sets:
-`cols(:a) | cols(:b)` give you both `:a` and `:b`, but `cols(:a) | -cols(:b)` or `cols(:a) | not(:b)` will return all the columns as one of the conditions must be true for each of them.
-
+`cols(:a) | cols(:b)` give you both `:a` and `:b`, but `cols(:a) | !cols(:b)` or `cols(:a) | not(:b)` will return all the columns as one of the conditions must be true for each of them.
 
 ### Renamings
 
@@ -178,7 +177,7 @@ function select(tab, args...; kwargs...)
         # Selection results -> triplets of column names, renamings and transforms that are fitted
         # to this particular table, the generic selections are replaced with actual column names.
         # If multiple selections were overlapping, their renamings and transformations were combined.
-        plans = resolve_nested(tab, queries)::SelectionResult
+        plans = resolve_nested(tab, queries)::SelectionPlan
         # the other_cols() are resolved if present
         process_other!(tab, plans)
         # Prepare renamings -- produces unique output names to be applied later

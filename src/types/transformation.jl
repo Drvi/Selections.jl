@@ -69,6 +69,12 @@ for T in (:ByCol, :ByCol!)
     end
 end
 
+struct ColumnCreation
+    s::AbstractSelection
+    t::AbstractTransformation
+    n::Symbol
+end
+
 
 const RowwiseTrans{T} = Union{ByRow{T}, ByRow!{T}} where T
 const ColwiseTrans{T} = Union{ByCol{T}, ByCol!{T}} where T

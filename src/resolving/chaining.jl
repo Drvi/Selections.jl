@@ -1,11 +1,17 @@
-_resolve_leaf(tab, s) = SelectionResult(_resolve(tab, s.s), s.r, s.t)
+#TODO(optimization): Esp for AndSelection, if we know from first(s) that that column cant be selected,
+# skip evaluating it in last(s).
+# e.g. `select(tab, cols([false, false, false]) & if_values(x->median(x) > 0)))`
+# We can skip all median calls.
+
+
+_resolve_leaf(tab, s) = SelectionPlan(_resolve(tab, s.s), s.r, s.t)
 
 function _resolve(tab, s::OrSelection)
     res = union_results(tab, _resolve_leaf(tab, first(s)), _resolve_leaf(tab, last(s)))
     if bool(s)
         res
     else
-        SelectionResult(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
     end
 end
 
@@ -14,7 +20,7 @@ function _resolve(tab, s::AndSelection)
     if bool(s)
         res
     else
-        SelectionResult(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
     end
 end
 
@@ -23,7 +29,7 @@ function _resolve(tab, s::SubSelection)
     if bool(s)
         res
     else
-        SelectionResult(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
     end
 end
 
@@ -55,13 +61,13 @@ function _union_results_inner!(tab, x, y, out)
     for yterm in filter(term -> colname(term) in yset, y)
         push!(out, yterm)
     end
-    SelectionResult(map(identity, out))
+    SelectionPlan(map(identity, out))
 end
 
-function union_results(tab, x::SelectionResult{<:SelectionTerm{ElseSelection}}, y::SelectionResult)
-    SelectionResult(
+function union_results(tab, x::SelectionPlan{<:SelectionTerm{ElseSelection}}, y::SelectionPlan)
+    SelectionPlan(
         vcat(
-            SelectionResult(
+            SelectionPlan(
                 setdiff(colnames(tab), colnames(y)),
                 keyfunc(x[1]),
                 valfunc(x[1])
@@ -71,11 +77,11 @@ function union_results(tab, x::SelectionResult{<:SelectionTerm{ElseSelection}}, 
     )
 end
 
-function union_results(tab, x::SelectionResult, y::SelectionResult{<:SelectionTerm{ElseSelection}})
-    SelectionResult(
+function union_results(tab, x::SelectionPlan, y::SelectionPlan{<:SelectionTerm{ElseSelection}})
+    SelectionPlan(
         vcat(
             x,
-            SelectionResult(
+            SelectionPlan(
                 setdiff(colnames(tab), colnames(x)),
                 keyfunc(y[1]),
                 valfunc(y[1])
@@ -95,7 +101,7 @@ end
 
 # Intersection #####################################################################################
 
-function intersect_results(tab, x::SelectionResult, y::SelectionResult)
+function intersect_results(tab, x::SelectionPlan, y::SelectionPlan)
     length(x) == 0 && return x
     length(y) == 0 && return y
 
@@ -116,16 +122,16 @@ function intersect_results(tab, x::SelectionResult, y::SelectionResult)
             )
         end
     end
-    SelectionResult(out)
+    SelectionPlan(out)
 end
 
-function intersect_results(tab, x::SelectionResult{<:SelectionTerm{T}}, y::SelectionResult) where {
+function intersect_results(tab, x::SelectionPlan{<:SelectionTerm{T}}, y::SelectionPlan) where {
         T<:Union{ElseSelection,OtherSelection}
     }
     ArgumentError("Cannot intersect with `$(T)`.")
 end
 
-function intersect_results(tab, x::SelectionResult, y::SelectionResult{<:SelectionTerm{T}}) where {
+function intersect_results(tab, x::SelectionPlan, y::SelectionPlan{<:SelectionTerm{T}}) where {
         T<:Union{ElseSelection,OtherSelection}
     }
     ArgumentError("Cannot intersect with `$(T)`.")
@@ -133,25 +139,25 @@ end
 
 function intersect_results(tab, x::S, y::S) where {
         T<:Union{ElseSelection,OtherSelection},
-        S<:SelectionResult{<:SelectionTerm{T}}
+        S<:SelectionPlan{<:SelectionTerm{T}}
     }
     throw(ArgumentError("Cannot resolve two `$(T)`s."))
 end
 
 # Setdiff ##########################################################################################
 
-function sub_results(tab, x::SelectionResult, y::SelectionResult)
+function sub_results(tab, x::SelectionPlan, y::SelectionPlan)
     yset = Set(colnames(y))
-    SelectionResult(filter(term->!(colname(term) in yset), x))
+    SelectionPlan(filter(term->!(colname(term) in yset), x))
 end
 
-function sub_results(tab, x::SelectionResult{<:SelectionTerm{T}}, y::SelectionResult) where {
+function sub_results(tab, x::SelectionPlan{<:SelectionTerm{T}}, y::SelectionPlan) where {
         T<:Union{ElseSelection,OtherSelection}
     }
     ArgumentError("Cannot subtract `$(T)`.")
 end
 
-function sub_results(tab, x::SelectionResult, y::SelectionResult{<:SelectionTerm{T}}) where {
+function sub_results(tab, x::SelectionPlan, y::SelectionPlan{<:SelectionTerm{T}}) where {
         T<:Union{ElseSelection,OtherSelection}
     }
     ArgumentError("Cannot subtract `$(T)`.")
@@ -159,7 +165,7 @@ end
 
 function sub_results(tab, x::S, y::S) where {
         T<:Union{ElseSelection,OtherSelection},
-        S<:SelectionResult{<:SelectionTerm{T}}
+        S<:SelectionPlan{<:SelectionTerm{T}}
     }
     throw(ArgumentError("Cannot resolve two `$(T)`s."))
 end

@@ -32,27 +32,29 @@ function _translate_types(p::Pair{T, S}) where {
     selection(first(p)) => renaming(last(p))
 end
 
-# __translate_types(p::Pair) = _translate_types(selection(first(p)) => last(p))
-# function _translate_types(p::Pair{<:AbstractContextSelection,T}) where {
-#         T<:Union{
-#             Pair{<:Union{Regex,AbstractString},
-#                  SubstitutionString},
-#             AbstractRenaming,
-#             Symbol,
-#             AbstractArray{Symbol},
-#             Tuple{Vararg{Symbol}}
-#         }
-#     }
-#     first(p) => renaming(last(p))
-# end
-#
-# function _translate_types(p::Pair{<:AbstractContextSelection,T}) where {
-#         T <: Union{AbstractTransformation,Callable}
-#     }
-#     first(p) => transformation(last(p))
-# end
-
 _translate_types(x) = selection(x)
+
+# Creating columns
+function _translate_types(p::Pair{S, Pair{T, Symbol}}) where {
+        S,
+        T <: Union{AbstractTransformation,Callable}
+    }
+    ColumnCreation(
+        selection(first(p)),
+        transformation(first(last(p))),
+        last(last(p))
+end
+
+function _translate_types(p::Pair{S, Pair{T, SymbolSelection}}) where {
+        S,
+        T <: Union{AbstractTransformation,Callable}
+    }
+    ColumnCreation(
+        selection(first(p)),
+        transformation(first(last(p))),
+        last(last(p)).s
+end
+
 
 # Stopping criteria
 _translate_types(x::AbstractSelection) = x

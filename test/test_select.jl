@@ -96,14 +96,14 @@ end
 
 symbol_queries = [
     (:a,) => [:a],
-    (-cols(:b),) => [:a, :c1],
+    (!cols(:b),) => [:a, :c1],
     (not(:c1),) => [:a, :b],
     (not(:a, :b, :c1),) => [],
     (:b, :a) => [:b, :a],
     ((:b, :a)) => [:b, :a],
-    (-cols(:b, :c1),) => [:a],
+    (!cols(:b, :c1),) => [:a],
     (not(:b, :c1),) => [:a],
-    (-(cols(:b) | cols(:c1)),) => [:a],
+    (!(cols(:b) | cols(:c1)),) => [:a],
     (not(cols(:b) & cols(:c1)),) => [:a, :b, :c1],
     (not(not(:a)),) => [:a]
 ]
@@ -112,19 +112,18 @@ symbol_errors = [
     :(:A,) => KeyError,
     :(cols(:A),) => KeyError,
     :((:a, :A)) => KeyError,
-    :(-cols(:A),) => KeyError
+    :(!cols(:A),) => KeyError
 ]
 
 int_queries = [
     (1,) => [:a],
-    (-cols(:b),) => [:a, :c1],
+    (!cols(:b),) => [:a, :c1],
     (not(3),) => [:a, :b],
-    ((-3,)) => [:a, :b],
     (2, 1) => [:b, :a],
     ((2, 1)) => [:b, :a],
-    (-cols(2, 3),) => [:a],
+    (!cols(2, 3),) => [:a],
     (not(2, 3),) => [:a],
-    (-(cols(2) | cols(3)),) => [:a],
+    (!(cols(2) | cols(3)),) => [:a],
     (not(cols(2) & cols(3)),) => [:a, :b, :c1]
 ]
 
@@ -132,15 +131,13 @@ int_errors = [
     :((4,)) => BoundsError,
     :((0,)) => ArgumentError,
     :((4, 1)) => BoundsError,
-    :((0, -2)) => ArgumentError,
-    :(-cols(4),) => BoundsError
+    :(!cols(4),) => BoundsError
 ]
 
 mixed_queries = [
     (1, :b) => [:a , :b],
     ((2, :a)) => [:b , :a],
     ([2, :a],) => [:b, :a],
-    (-cols(2, :c1),) => [:a],
     (!cols(2, :c1),) => [:a],
     (~cols(2, :c1),) => [:a],
     (cols(:b, 1),) => [:b, :a],
@@ -156,16 +153,16 @@ mixed_errors = [
 int_range_queries = [
     (1:1,) => [:a],
     (!cols(2:2),) => [:a, :c1],
-    (-3:-3,) => [:a, :b],
     (1:2,) => [:a, :b],
     (1:2:3,) => [:a, :c1],
-    (-3:2:-1,) => [:b]
+    (!cols(1:2:3),) => [:b]
 ]
 
 int_range_errors = [
     :(0:3,) => ArgumentError,
     :(4:4,) => BoundsError,
-    :(-4:-4) => BoundsError
+    :(-4:-4) => BoundsError,
+    :(-3:-3,) => BoundsError,
 ]
 
 symbol_range_queries = [
@@ -180,10 +177,10 @@ symbol_range_queries = [
 symbol_range_errors = [
     :(colrange(:a, :d),) => KeyError,
     :(colrange(:d, :d),) => KeyError,
-    :(-colrange(:d, :d),) => KeyError,
+    :(!colrange(:d, :d),) => KeyError,
     :(colrange(1, 4),) => BoundsError,
     :(colrange(0, 0),) => ArgumentError,
-    :(-colrange(4, 0),) => ArgumentError
+    :(!colrange(4, 0),) => ArgumentError
 ]
 
 bool_queries = [
@@ -199,14 +196,14 @@ bool_errors = [
 
 regex_queries = [
     (if_matches(r"."),) => [:a, :b, :c1], (if_matches(r"a"),) => [:a],
-    (-if_matches(r"b"),) => [:a, :c1], (!if_matches(r"c"),) => [:a, :b],
-    (if_matches("c"),) => [:c1], (-if_matches('b'),) => [:a, :c1],
+    (!if_matches(r"b"),) => [:a, :c1], (!if_matches(r"c"),) => [:a, :b],
+    (if_matches("c"),) => [:c1], (!if_matches('b'),) => [:a, :c1],
     (if_keys(x->length(x) == 2),) => [:c1], (~if_keys(x->length(x) == 1),) => [:c1]
 ]
 
 predicate_queries = [
     (if_values(x -> !any(ismissing.(x))),) => [:a, :b, :c1],
-    (-if_values(x -> !any(ismissing.(x))),) => [],
+    (!if_values(x -> !any(ismissing.(x))),) => [],
     (!if_values(x -> !any(ismissing.(x))),) => [],
     (if_eltype(Char),) => [:b],
     (~if_eltype(Int),) => [:b, :c1],
@@ -216,8 +213,8 @@ predicate_queries = [
 
 combined_queries = [
     (if_eltype(Int) | if_matches(r"b"),) => [:a, :b],
-    (-if_eltype(Int) | if_matches(r"b"),) => [:b, :c1],
-    (-if_eltype(Int) & if_matches(r"b"),) => [:b],
+    (!if_eltype(Int) | if_matches(r"b"),) => [:b, :c1],
+    (!if_eltype(Int) & if_matches(r"b"),) => [:b],
     (cols(:c1, (not(:a) & if_matches(r"b"))) | cols(:a),) => [:c1, :b, :a],
     (not(:c1) & not(:b),) => [:a],
     (cols(:c1) | cols(:a),) => [:c1, :a]
@@ -245,6 +242,7 @@ renaming_queries = [
     (:c1 => key_suffix("C"), not(:b) => key_suffix("D"),) => [:c1 => :c1CD, :a => :aD]
 ]
 
+# TODO: Make the warnings opt-in, error by default
 renaming_queries_warn = [
     (query = (:a => [:X, :Y],) => [:a => :a],
      msg = "Renaming array had different length (2) than target selections (1), renaming skipped."),

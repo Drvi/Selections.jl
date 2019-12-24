@@ -18,7 +18,7 @@ function resolve_flat(tab, x::Pair{<:Any,<:ColwiseTrans})
     _resolve(tab, selection(first(x))) => last(x)
 end
 
-resolve_nested(tab, s::SelectionQuery) = SelectionResult(_resolve(tab, s.s), s.r, s.t)
+resolve_nested(tab, s::SelectionQuery) = SelectionPlan(_resolve(tab, s.s), s.r, s.t)
 resolve_nested(tab, s::AbstractMultiSelection) = _resolve(tab, s)
 
 positive_selection(tab, symbols::Tuple{Vararg{Symbol}}, b::Bool) = b ? collect(symbols) : setdiff(colnames(tab), symbols)
@@ -86,14 +86,14 @@ function _resolve(tab, s::Union{Tuple,AbstractArray{<:AbstractSelection}})
     end
 end
 
-function _resolve(tab, s::PredicateSelection)
+function _resolve(tab, s::ValuesPredicateSelection)
     [k for (k, v) in pairs(map(s.f, columntable(tab))) if bool(s) ? v : !v]
 end
-function _resolve(tab, s::KeyPredicateSelection)
+function _resolve(tab, s::KeysPredicateSelection)
     c = colnames(tab)
     [k for (k, v) in (c .=> map(s.f, string.(c))) if bool(s) ? v : !v]
 end
-function _resolve(tab, s::PairPredicateSelection)
+function _resolve(tab, s::PairsPredicateSelection)
     [k for (k, v) in pairs(columntable(tab)) if bool(s) ? s.f(string(k), v) : !s.f(string(k), v)]
 end
 _resolve(tab, s::AllSelection) = collect(colnames(tab))

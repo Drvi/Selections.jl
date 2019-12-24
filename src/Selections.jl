@@ -7,7 +7,7 @@ using Tables: columns, columntable, materializer, rowtable, schema
 
 export select #, select_colnames, select_renames, rename, subset, transform
 export col, cols, not
-export if_keys, if_values, if_pairs, if_eltype, if_matches, colrange
+export alias # if_keys, if_values, if_pairs, if_eltype, if_matches, colrange
 export all_cols, other_cols, else_cols
 export key_map, key_prefix, key_replace, key_suffix
 export bycol, bycol!, byrow, byrow!, bytab, bytab!

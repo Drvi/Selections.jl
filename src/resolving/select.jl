@@ -1,7 +1,7 @@
 newcolfunc(x) = length(x) == 1 ? @inbounds(x[1]) : rowtable(x)
 newcolfunc(x::AbstractArray) = x
 
-process_other!(table, plans::SelectionResult{<:SelectionTerm{Symbol}}) = plans
+process_other!(table, plans::SelectionPlan{<:SelectionTerm{Symbol}}) = plans
 
 function process_other!(tab, plans)
     isempty(plans) && (return plans)
@@ -81,7 +81,7 @@ function select(tab, args...; kwargs...)
         # Selection results -> triplets of column names, renamings and transforms that are fitted
         # to this particular table, the generic selections are replaces with actual column names.
         # If multiple selections were overlapping, their renamings and transformations were combined.
-        plans = resolve_nested(tab, queries)::SelectionResult
+        plans = resolve_nested(tab, queries)::SelectionPlan
         # the other_cols() are resolved if present
         process_other!(tab, plans)
         # Prepare renamings -- produces unique output names to be applied later
