@@ -69,9 +69,9 @@ for T in (:ByCol, :ByCol!)
     end
 end
 
-struct ColumnCreation
-    s::AbstractSelection
-    t::AbstractTransformation
+struct ColumnCreation{S,T} where {S<:AbstractSelection, T<:AbstractTransformation}
+    s::S
+    t::T
     n::Symbol
 end
 

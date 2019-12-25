@@ -1,4 +1,4 @@
-struct RenamingFunction{S} <: AbstractRenaming where S <: Callable
+struct RenamingFunction{S} <: AbstractRenaming where S <: Base.Callable
     s::S
 end
 (s::RenamingFunction)(x::Symbol) = Symbol(s.s(string(x)))
@@ -7,36 +7,42 @@ Base.show(io::IO, r::RenamingFunction) = print(io, "RenamingFunction(", r.s, ")"
 struct RenamingSymbols{S} <: AbstractRenaming
     s::S
 end
+RenamingSymbols(s::AbstractVector{S}) where S<:Union{AbstractChar,AbstractString} = RenamingSymbols(map(Symbol, s))
 Base.show(io::IO, r::RenamingSymbols) = print(io, "RenamingSymbols(", r.s, ")")
 (r::RenamingSymbols)(x) = r.s
 
 struct RenamingSymbol <: AbstractRenaming
     s::Symbol
 end
+RenamingSymbol(s::Union{AbstractChar,AbstractString}) = RenamingSymbol(Symbol(s))
 Base.show(io::IO, r::RenamingSymbol) = print(io, "RenamingSymbol(:", r.s, ")")
 (r::RenamingSymbol)(x) = r.s
 
-apply_affixes(xs::Symbol}, prefix, suffix) = Symbol(_apply_affixes(prefix, xs, suffix))
-apply_affixes(xs::Union{AbstractVector{Symbol},Tuple{Vararg{Symbol}}}, prefix, suffix) = _apply_affixes.(prefix, xs, suffix)
-apply_affixes(f::Callable, prefix, suffix) = x->_apply_affixes(prefix, f(x), suffix)
-apply_affixes(p::Pair, prefix, suffix) = x->_apply_affixes(prefix, replace(x, first(p) => last(p), suffix)
+add_affixes(xs::Symbol, prefix, suffix) =
+    RenamingSymbol(_add_affixes(prefix, xs, suffix))
+add_affixes(xs::Union{AbstractVector{Symbol},Tuple{Vararg{Symbol}}}, prefix, suffix) =
+    RenamingSymbols(_add_affixes.(prefix, xs, suffix))
+add_affixes(f::Base.Callable, prefix, suffix) =
+    RenamingFunction(x->_add_affixes(prefix, f(x), suffix))
+add_affixes(p::Pair{<:Union{AbstractString,AbstractChar,Regex}, <:Union{AbstractString,AbstractChar,SubstitutionString}}, prefix, suffix) =
+    RenamingFunction(x->_add_affixes(prefix, replace(x, first(p) => last(p), suffix)))
 
-_apply_affixes(prefix, s, suffix) = string(prefix, s, suffix)
-_apply_affixes(prefix::Nothing, s, suffix) = string(s, suffix)
-_apply_affixes(prefix, s, suffix::Nothing) = string(prefix, s)
-_apply_affixes(prefix::Nothing, s, suffix::Nothing) = s
+_add_affixes(prefix, s, suffix) = string(prefix, s, suffix)
+_add_affixes(prefix::Nothing, s, suffix) = string(s, suffix)
+_add_affixes(prefix, s, suffix::Nothing) = string(prefix, s)
+_add_affixes(prefix::Nothing, s, suffix::Nothing) = s
 
+renaming(r::R) where R <: AbstractRenaming = r
+renaming(s::Symbol) = RenamingSymbol(s)
+renaming(s::Union{Tuple{Vararg{Symbol}}, AbstractArray{Symbol}}) = RenamingSymbols(s)
+renaming(f::Base.Callable) = RenamingFunction(f)
+renaming(r::Pair{<:Union{AbstractString,AbstractChar,Regex}, <:Union{AbstractString,AbstractChar,SubstitutionString}}) =
+    RenamingFunction(x->replace(x, first(p) => last(p)))
 
 apply_rename(::Nothing, colname) = colname
 apply_rename(c::Composition, colname) = apply_rename(c.funcs, colname)
 apply_rename(fs, colname) = apply_rename(Base.tail(fs), first(fs)(colname))
 apply_rename(::Tuple{}, colname) = colname
-
-renaming(r::R) where R <: AbstractRenaming = r
-renaming(r::Pair{<:Union{AbstractString,AbstractChar,Regex}, SubstitutionString}) = key_replace(r)
-renaming(s::Symbol) = RenamingSymbol(s)
-renaming(s::Union{Tuple{Vararg{Symbol}}, AbstractArray{Symbol}}) = RenamingSymbols(s)
-renaming(c::Callable) = key_map(c)
 
 # alias(r; prefix=Nothing, suffix=Nothing)
 function alias(
@@ -47,17 +53,17 @@ function alias(
 end
 
 function alias(
-    r;
-    prefix::Nothing=nothing,
-    suffix::Nothing=nothing)
-    renaming(r)
+    ;
+    prefix::Union{Nothing,AbstractChar,AbstractString,Symbol}=nothing,
+    suffix::Union{Nothing,AbstractChar,AbstractString,Symbol}=nothing)
+    RenamingFunction(x->_add_affixes(prefix, x, suffix))
 end
 
 function alias(
     r;
     prefix::Union{Nothing,AbstractChar,AbstractString,Symbol}=nothing,
     suffix::Union{Nothing,AbstractChar,AbstractString,Symbol}=nothing)
-    apply_affixes(r)
+    add_affixes(r, prefix, suffix)
 end
 
 
@@ -76,4 +82,4 @@ Usage:
 
 See also: [`select`](@ref), [`selection`](@ref), [`transformation`](@ref)
 """
-key_prefix, key_suffix, key_map, key_replace, renaming
+key_prefix, key_suffix, key_map, key_replace, renaming, alias
