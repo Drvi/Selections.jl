@@ -65,10 +65,20 @@ end
 params(s::PairsPredicateSelection) = (s.f,)
 
 for S in (:ElementSelection, :ArraySelection, :PairsPredicateSelection)
+    _S = string(S)
     @eval (Base.:!)(s::$(S)) = $(S)(params(s)..., !bool(s), keyfunc(s), valfunc(s))
-    @eval Base.show(io::IO, s::$(S)) = print(io, bool(s) ? "" : "!", Symbol($S), "(", repr.(params(s))..., ")")
-    @eval function extend_selection(s::$(S), r=nothing, t=nothing)
-        $(S)(params(s)..., bool(s), extend(keyfunc(s), r), extend(valfunc(s), t))
+    @eval function Base.show(io::IO, s::$(S))
+        print(io,
+        bool(s) ? "" : "!",
+        $(_S),
+        "(",
+        repr.(params(s))...,
+        ")",
+        isnothing(keyfunc(s)) ? "" : " => $(keyfunc(s))",
+        isnothing(valfunc(s)) ? "" : " => $(valfunc(s))")
+    end
+    @eval function extend_selection(s::$(S), b=bool(s), r=nothing, t=nothing)
+        $(S)(params(s)..., b, extend(keyfunc(s), r), extend(valfunc(s), t))
     end
 end
 (Base.:!)(s::RangeSelection) = RangeSelection(params(s)..., !bool(s), keyfunc(s), valfunc(s))
@@ -86,44 +96,60 @@ function Base.show(io::IO, s::RangeSelection)
 end
 
 
-selection(x::Union{Int,Symbol}, b=true, r=nothing,t=nothing) =
+selection(x::Union{Int,Symbol}; b::Bool=true, r=nothing,t=nothing) =
     ElementSelection(x, b, r, t)
-selection(x::AbstractVector{Bool}, b=true, r=nothing,t=nothing) =
+selection(x::AbstractVector{Bool}; b::Bool=true, r=nothing,t=nothing) =
     ArraySelection(x, b, r, t)
-selection(x::AbstractVector{S}, b=true, r=nothing,t=nothing) where {S<:Union{Int,Symbol}} =
+selection(x::AbstractVector{S}; b::Bool=true, r=nothing,t=nothing) where {S<:Union{Int,Symbol}} =
     ArraySelection(x, b, r, t)
-selection(x::Tuple{Vararg{S}}, b=true, r=nothing,t=nothing) where {S<:Union{Int,Symbol}} =
+selection(x::Tuple{Vararg{S}}; b::Bool=true, r=nothing,t=nothing) where {S<:Union{Int,Symbol}} =
     ArraySelection(x, b, r, t)
-selection(x::AbstractVector, b=true, r=nothing,t=nothing) =
+selection(x::AbstractVector; b::Bool=true, r=nothing,t=nothing) =
     isempty(x) ? ArraySelection(Symbol[], b, r, t) : cols(x...)
-selection(x::Tuple, b=true, r=nothing,t=nothing) =
+selection(x::Tuple; b::Bool=true, r=nothing,t=nothing) =
     isempty(x) ? ArraySelection(Symbol[], b, r, t) : cols(x...)
-selection(x::StepRange{Int,Int}, b=true, r=nothing,t=nothing) =
+selection(x::StepRange{Int,Int}; b::Bool=true, r=nothing,t=nothing) =
     RangeSelection(x, b, r, t)
-selection(x::UnitRange{Int}, b=true, r=nothing,t=nothing) =
+selection(x::UnitRange{Int}; b::Bool=true, r=nothing,t=nothing) =
     RangeSelection(x, b, r, t)
-selection(x::Union{Regex,AbstractString,Char}, b=true, r=nothing,t=nothing) =
+selection(x::Union{Regex,AbstractString,Char}; b::Bool=true, r=nothing,t=nothing) =
     PairsPredicateSelection((k,v) -> occursin(x, string(k)), b, r, t)
-selection(x::DataType, b=true, r=nothing,t=nothing) =
+selection(x::DataType; b::Bool=true, r=nothing,t=nothing) =
     PairsPredicateSelection((k,v) -> eltype(v) <: x || eltype(v) <: Union{Missing, t}, b, r, t)
-selection(x::Base.Callable, b=true, r=nothing,t=nothing) =
+selection(x::Base.Callable; b::Bool=true, r=nothing,t=nothing) =
     PairsPredicateSelection(x, b, r, t)
-selection(x::AbstractSelection, b=true, r=nothing, t=nothing) = x
-selection(x::AbstractMetaSelection, b=true, r=nothing, t=nothing) = x
+selection(x::AbstractSelection; bool::Bool=bool(x), r=nothing, t=nothing) = extend_selection(x, b, r, t)
 
-# cols(s...; alias, trans)
+
 cols() = all_cols()
-cols(s) = selection(s, true)
-cols(s...) = mapfoldl(cols, OrSelection, [s...])
+cols(s::AbstractSelection) = selection(s, b=bool(s))
+cols(s) = selection(s, b=true)
+cols(s...) = mapfoldl(cols, OrSelection, (s...,))
 
 cols_range(start::S, stop::S; step::S=one(S)) where {S<:Integer} = RangeSelection(start, stop, step)
 cols_range(start::Symbol, stop::Symbol; step::S=1) where {S<:Integer} = RangeSelection(start, stop, step)
 
 # not(s...; alias, trans)
 not() = throw(MethodError(not, ()))
-not(s) = selection(s, false)
-not(p::Pair) = not(first(p)) => last(p)
-not(s...) = mapfoldl(not, AndSelection, [s...])
+not(s::AbstractSelection) = selection(s, b=!bool(s))
+not(s) = selection(s, b=false)
+not(s...) = mapfoldl(not, AndSelection, (s...,))
+
+
+# cols(; alias::R=nothing, trans::T=nothing) where {R,T} = all_cols(alias, trans)
+# cols(s::AbstractSelection; alias::R=nothing, trans::T=nothing) where {R,T} = selection(s, b=bool(s), r=alias, t=trans)
+# cols(s; alias::R=nothing, trans::T=nothing) where {R,T} = selection(s, bool=true, r=alias, t=trans)
+# cols(s...; alias::R=nothing, trans::T=nothing) where {R,T} = extend_selection(mapfoldl(cols, OrSelection, [s...]), alias, trans)
+#
+# cols_range(start::S, stop::S; step::S=one(S)) where {S<:Integer} = RangeSelection(start, stop, step)
+# cols_range(start::Symbol, stop::Symbol; step::S=1) where {S<:Integer} = RangeSelection(start, stop, step)
+#
+# # not(s...; alias, trans)
+# not(; alias::R=nothing, trans::T=nothing) where {R,T} = throw(MethodError(not, ()))
+# not(s::AbstractSelection; alias::R=nothing, trans::T=nothing) where {R,T} = selection(s; b=!bool(s), r=alias, t=trans)
+# not(s; alias::R=nothing, trans::T=nothing) where {R,T} = selection(s, false)
+# not(s...; alias::R=nothing, trans::T=nothing) where {R,T} = mapfoldl(not, AndSelection, [s...])
+
 
 
 """

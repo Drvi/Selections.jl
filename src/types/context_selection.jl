@@ -1,13 +1,15 @@
 for (T, f) in ((:OtherSelection, :other_cols), (:ElseSelection, :else_cols), (:AllSelection, :all_cols))
     @eval begin
-        struct $(T){S,R,T} <: AbstractContextSelection{F,R,T} where F <: Callable;
+        struct $(T){S,R,T} <: AbstractContextSelection{R,T} where S <: Base.Callable;
             s::S
             r::R
             t::T
-            $(T)(s::S,r::R=nothing,t::T=nothing) where {S<:Callable,R,T} = new{S,R,T}()
+            $(T)(s::S, r::R=nothing, t::T=nothing) where {S<:Base.Callable,R,T} = new{S,R,T}(s,r,t)
         end
         $(f)() = $(T)((k,v)->true)
-        # (!)(x::$(T)) = throw(ArgumentError(string($(f), "() cannot be negated.")))
+        function extend_selection(s::$(T), r=nothing, t=nothing)
+            $(T)(params(s)..., bool(s), extend(keyfunc(s), r), extend(valfunc(s), t))
+        end
         Base.show(io::IO, s::$(T)) = print(io, $(f), "()")
     end
 end

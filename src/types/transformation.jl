@@ -11,21 +11,21 @@ for T in (:ByRow, :ByRow!)
             f::S
             cols::Tuple{Vararg{Symbol}}
         end
-        $(F)(x::Callable) = $(T){false, typeof(x)}(x, Tuple{Vararg{Symbol,0}}())
-        $(F)(x::Callable, cols) = $(T){false, typeof(x)}(x, cols)
-        $(F)(x::Pair{Tuple{Vararg{Symbol}},Callable}) = $(T){false, typeof(x)}(last(x), first(x))
-        $(F)(x::Pair{Symbol,Callable}) = $(T){false, typeof(x)}(last(x), (first(x),))
+        $(F)(x::Base.Callable) = $(T){false, typeof(x)}(x, Tuple{Vararg{Symbol,0}}())
+        $(F)(x::Base.Callable, cols) = $(T){false, typeof(x)}(x, cols)
+        $(F)(x::Pair{Tuple{Vararg{Symbol}},Base.Callable}) = $(T){false, typeof(x)}(last(x), first(x))
+        $(F)(x::Pair{Symbol,Base.Callable}) = $(T){false, typeof(x)}(last(x), (first(x),))
 
-        @inline function Broadcast.broadcasted(::typeof($(F)), x::Callable)
+        @inline function Broadcast.broadcasted(::typeof($(F)), x::Base.Callable)
             $(T){true, typeof(x)}(x, Tuple{Vararg{Symbol,0}}())
         end
-        @inline function Broadcast.broadcasted(::typeof($(F)), x::Callable, cols)
+        @inline function Broadcast.broadcasted(::typeof($(F)), x::Base.Callable, cols)
             $(T){true, typeof(x)}(x, cols)
         end
-        @inline function Broadcast.broadcasted(::typeof($(F)), x::Pair{Tuple{Vararg{Symbol}},Callable})
+        @inline function Broadcast.broadcasted(::typeof($(F)), x::Pair{Tuple{Vararg{Symbol}},Base.Callable})
             $(T){true, typeof(x)}(last(x), first(x))
         end
-        @inline function Broadcast.broadcasted(::typeof($(F)), x::Pair{Symbol,Callable})
+        @inline function Broadcast.broadcasted(::typeof($(F)), x::Pair{Symbol,Base.Callable})
             $(T){true, typeof(x)}(last(x), (first(x),))
         end
         @inline (t::$(T){true})(x, colname) = broadcasted(t.f, x, colname)
@@ -42,10 +42,10 @@ for T in (:ByTab, :ByTab!)
             f::S
             cols::Tuple{Vararg{Symbol}}
         end
-        $(F)(x::Callable) = $(T){false, typeof(x)}(x, Tuple{Vararg{Symbol,0}}())
-        $(F)(x::Callable, cols) = $(T){false, typeof(x)}(x, cols)
-        $(F)(x::Pair{Tuple{Vararg{Symbol}},Callable}) = $(T){false, typeof(x)}(last(x), first(x))
-        $(F)(x::Pair{Symbol,Callable}) = $(T){false, typeof(x)}(last(x), (first(x),))
+        $(F)(x::Base.Callable) = $(T){false, typeof(x)}(x, Tuple{Vararg{Symbol,0}}())
+        $(F)(x::Base.Callable, cols) = $(T){false, typeof(x)}(x, cols)
+        $(F)(x::Pair{Tuple{Vararg{Symbol}},Base.Callable}) = $(T){false, typeof(x)}(last(x), first(x))
+        $(F)(x::Pair{Symbol,Base.Callable}) = $(T){false, typeof(x)}(last(x), (first(x),))
 
         @inline (t::$(T){false})(x, colname) = t.f(x, colname)
         Base.show(io::IO, f::$(T){false}) = print(io, $(F), "(", f.f, ")")
@@ -58,8 +58,8 @@ for T in (:ByCol, :ByCol!)
         struct $(T){Bool,S} <: AbstractTransformation{Bool} where S
             f::S
         end
-        $(F)(x::Callable) = $(T){false, typeof(x)}(x)
-        @inline function Broadcast.broadcasted(::typeof($(F)), x::Callable)
+        $(F)(x::Base.Callable) = $(T){false, typeof(x)}(x)
+        @inline function Broadcast.broadcasted(::typeof($(F)), x::Base.Callable)
             $(T){true, typeof(x)}(x)
         end
         @inline (t::$(T){true})(x) = broadcasted(t.f, x)
@@ -69,11 +69,32 @@ for T in (:ByCol, :ByCol!)
     end
 end
 
-struct ColumnCreation{S,T} where {S<:AbstractSelection, T<:AbstractTransformation}
+struct ColumnCreation{S,T,N}
     s::S
     t::T
-    n::Symbol
+    n::N
+    function ColumnCreation(s::S, t::T, n::N) where {
+            S<:Union{Symbol,ElementSelection},
+            T<:AbstractTransformation,
+            N<:Union{RenamingSymbol,RenamingFunction,Symbol}
+        }
+        new{S,T,N}(s,t,n)
+    end
 end
+
+struct ColumnCreations{S,T,N}
+    s::S
+    t::T
+    n::N
+    function ColumnCreations(s::S,t::T,n::N) where {
+            S<:Union{AbstractVector{Symbol},Tuple{Vararg{Symbol}},AbstractSelection},
+            T<:AbstractTransformation,
+            N<:Union{RenamingFunction,RenamingSymbols}
+        }
+        new{S,T,N}(s,t,n)
+    end
+end
+
 
 
 const RowwiseTrans{T} = Union{ByRow{T}, ByRow!{T}} where T
@@ -267,7 +288,7 @@ function apply_trans_flat(f::ByCol!{false}, selected_colnames, newcolname, nt)
     end
 end
 
-transformation(f::Callable) = bycol(f)
+transformation(f::Base.Callable) = bycol(f)
 transformation(t::AbstractTransformation) = t
 
 """

@@ -1,15 +1,12 @@
 module Selections
 
-import Base: !, ~, -, |, &
-using Base: Callable
 using Base.Broadcast: broadcasted, materialize, materialize!
 using Tables: columns, columntable, materializer, rowtable, schema
 
 export select #, select_colnames, select_renames, rename, subset, transform
-export col, cols, not
-export alias # if_keys, if_values, if_pairs, if_eltype, if_matches, colrange
+export col, cols, not #, if_keys, if_values, if_pairs, if_eltype, if_matches, colrange
+export alias #, key_map, key_prefix, key_replace, key_suffix
 export all_cols, other_cols, else_cols
-export key_map, key_prefix, key_replace, key_suffix
 export bycol, bycol!, byrow, byrow!, bytab, bytab!
 
 
@@ -20,9 +17,9 @@ include("types/abstract.jl")
 include("types/context_selection.jl")
 include("types/renaming.jl")
 include("types/intermediate_containers.jl")
-include("types/chaining.jl")
 include("types/selection.jl")
 include("types/transformation.jl")
+include("types/chaining.jl")
 
 include("resolving/input_conversions.jl")
 include("resolving/chaining.jl")

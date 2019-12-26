@@ -4,14 +4,16 @@
 # We can skip all median calls.
 
 
-_resolve_leaf(tab, s) = SelectionPlan(_resolve(tab, s.s), s.r, s.t)
+_resolve_leaf(tab, s) = SelectionPlan(_resolve(tab, s), s.r, s.t)
 
 function _resolve(tab, s::OrSelection)
     res = union_results(tab, _resolve_leaf(tab, first(s)), _resolve_leaf(tab, last(s)))
     if bool(s)
         res
     else
-        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        r = expand(keyfunc(res), keyfunc(s))
+        t = expand(valfunc(res), valfunc(s))
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), r, t)
     end
 end
 
@@ -20,7 +22,9 @@ function _resolve(tab, s::AndSelection)
     if bool(s)
         res
     else
-        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        r = expand(keyfunc(res), keyfunc(s))
+        t = expand(valfunc(res), valfunc(s))
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), r, t)
     end
 end
 
@@ -29,7 +33,9 @@ function _resolve(tab, s::SubSelection)
     if bool(s)
         res
     else
-        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), nothing, nothing)
+        r = expand(keyfunc(res), keyfunc(s))
+        t = expand(valfunc(res), valfunc(s))
+        SelectionPlan(positive_selection(tab, colnames(res), bool(s)), r, t)
     end
 end
 

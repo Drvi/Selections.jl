@@ -16,39 +16,47 @@ for (op, MS) in ((:|, :OrSelection), (:&, :AndSelection), (:-, :SubSelection))
             end
         end
         (Base.:!)(s::$(MS)) = $(MS)(params(s)..., !bool(s), keyfunc(s), valfunc(s))
+        function extend_selection(s::$(MS), r=nothing, t=nothing)
+            $(MS)(params(s)..., bool(s), extend(keyfunc(s), r), extend(valfunc(s), t))
+        end
     end
-    let _T = Union{AbstractSelection, SelectionQuery, Pair{<:AbstractSelection,<:Any}},
-        _S = SelectionQuery{<:AbstractContextSelection}
+    let _T = Union{AbstractSelection, Pair{<:AbstractSelection,<:Any}},
+        _S = AbstractContextSelection
         # Since operators like & and | have high precendence, we need to make sure
         # the inputs got converted
         @eval ($(op))(s1, s2::S) where S<:$(_T) = $(MS)(s1, s2)
         @eval ($(op))(s1::S, s2) where S<:$(_T) = $(MS)(s1, s2)
         @eval ($(op))(s1::S, s2::T) where {S<:$(_T), T<:$(_T)} = $(MS)(s1, s2)
         # Inverting a selection that contains all the columns results to an empty selection
-        @eval (!)(s::$(MS){S,<:Any}) where {S<:$(_S)} =
+        @eval (Base.:!)(s::$(MS){S,<:Any}) where {S<:$(_S)} =
             throw(ArgumentError(string("Cannot invert ", $(MS) , " containing a ", S)))
-        @eval (!)(s::$(MS){<:Any,S}) where {S<:$(_S)} =
+        @eval (Base.:!)(s::$(MS){<:Any,S}) where {S<:$(_S)} =
             throw(ArgumentError(string("Cannot invert ", $(MS) , " containing a ", S)))
-        @eval (!)(s::$(MS){S,T}) where {S<:$(_S), T<:$(_S)} =
+        @eval (Base.:!)(s::$(MS){S,T}) where {S<:$(_S), T<:$(_S)} =
             throw(ArgumentError(string("Cannot invert ", $(MS) , " containing a ", S)))
     end
 end
 
 for (MS, verb) in [(:AndSelection, "intersect"), (:SubSelection, "setdiff")]
     @eval begin
-        @eval $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:OtherSelection} =
-            throw(ArgumentError(string("Cannot  ", verb, " with an `other_cols()`"))
-        @eval $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:OtherSelection} =
-            throw(ArgumentError(string("Cannot  ", verb, " with an `other_cols()`"))
+        $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:OtherSelection} =
+            throw(ArgumentError(string("Cannot  ", verb, " with an `other_cols()`")))
+        $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:OtherSelection} =
+            throw(ArgumentError(string("Cannot  ", verb, " with an `other_cols()`")))
 
-        @eval $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:ElseSelection} =
-            throw(ArgumentError(string("Cannot  ", verb, " with an `else_cols()`"))
-        @eval $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:ElseSelection} =
-            throw(ArgumentError(string("Cannot  ", verb, " with an `else_cols()`"))
+        $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:ElseSelection} =
+            throw(ArgumentError(string("Cannot  ", verb, " with an `else_cols()`")))
+        $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:ElseSelection} =
+            throw(ArgumentError(string("Cannot  ", verb, " with an `else_cols()`")))
 
-        @eval $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:ColumnCreation} =
-            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns"))
-        @eval $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:ColumnCreation} =
-            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns"))
+        $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:ColumnCreation} =
+            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns")))
+        $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:ColumnCreation} =
+            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns")))
+
+        $(MS)(s1::T, s2::S, ::Bool) where {T<:AbstractSelection, S<:ColumnCreations} =
+            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns")))
+        $(MS)(s1::S, s2::T, ::Bool) where {T<:AbstractSelection, S<:ColumnCreations} =
+            throw(ArgumentError(string("Cannot  ", verb, " when creating new columns")))
     end
 end
