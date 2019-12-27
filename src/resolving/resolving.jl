@@ -96,10 +96,20 @@ function _resolve(tab, s::PairsPredicateSelection)
     SelectionPlan(
         [k for (k, v) in pairs(columntable(tab)) if bool(s) ? s.f(string(k), v) : !s.f(string(k), v)],
         s.r,
-        s.t)
+        s.t
+    )
 end
+
+# function _resolve(tab, s::PairsPredicateSelection, in_cond::Set{Symbol})
+#     SelectionPlan(
+#         [k for (k, v) in pairs(columntable(tab)) if k in in_cond && (bool(s) ? s.f(string(k), v) : !s.f(string(k), v))],
+#         s.r,
+#         s.t
+#     )
+# end
+
 _resolve(tab, s::AllSelection) = collect(colnames(tab))
-_resolve(tab, s::ColumnCreation) = ColumnCreation(_resolve(tab, s.s), s.t, _resolve(s.n))
+_resolve(tab, s::ColumnCreation) = ColumnCreation(_resolve(tab, s.s), s.t, _resolve(tab, s.n))
 
 # These needs to be resolved at later stage
 _resolve(tab, s::OtherSelection) = OtherSelection(_resolve(s.s), keyfunc(s), valfunc(s))

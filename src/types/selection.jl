@@ -115,7 +115,7 @@ selection(x::UnitRange{Int}; b::Bool=true, r=nothing,t=nothing) =
 selection(x::Union{Regex,AbstractString,Char}; b::Bool=true, r=nothing,t=nothing) =
     PairsPredicateSelection((k,v) -> occursin(x, string(k)), b, r, t)
 selection(x::DataType; b::Bool=true, r=nothing,t=nothing) =
-    PairsPredicateSelection((k,v) -> eltype(v) <: x || eltype(v) <: Union{Missing, t}, b, r, t)
+    PairsPredicateSelection((k,v) -> eltype(v) <: x || eltype(v) <: Union{Missing, x}, b, r, t)
 selection(x::Base.Callable; b::Bool=true, r=nothing,t=nothing) =
     PairsPredicateSelection(x, b, r, t)
 selection(x::AbstractSelection; bool::Bool=bool(x), r=nothing, t=nothing) = extend_selection(x, b, r, t)

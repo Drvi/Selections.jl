@@ -1,5 +1,6 @@
 module Selections
 
+import Base: !, ~, -
 using Base.Broadcast: broadcasted, materialize, materialize!
 using Tables: columns, columntable, materializer, rowtable, schema
 

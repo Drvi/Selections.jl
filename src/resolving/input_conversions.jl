@@ -9,7 +9,7 @@ function translate_types(p::Pair{S, Pair{R, T}}) where {
         },
         T <: Union{AbstractTransformation,Base.Callable}
     }
-    selection(first(p), true, renaming(last(last(p))), transformation(first(last(p))))
+    selection(first(p), b=true, r=renaming(last(last(p))), t=transformation(first(last(p))))
 end
 
 function translate_types(p::Pair{Pair{S, R}, T}) where {
@@ -23,11 +23,11 @@ function translate_types(p::Pair{Pair{S, R}, T}) where {
         },
         T <: Union{AbstractTransformation,Base.Callable}
     }
-    selection(first(first(p)), true, renaming(first(last(p))), transformation(last(last(p))))
+    selection(first(first(p)), b=true, r=renaming(first(last(p))), t=transformation(last(last(p))))
 end
 
 function translate_types(p::Pair{S,T}) where {S, T <: AbstractTransformation}
-    selection(first(p), true, nothing, last(p))
+    selection(first(p), b=true, r=nothing, t=last(p))
 end
 
 function translate_types(p::Pair{S,T}) where {S, T <: Base.Callable}
@@ -46,7 +46,7 @@ function translate_types(p::Pair{S,R}) where {
             Tuple{Vararg{Symbol}}
         }
     }
-    selection(first(p), true, renaming(last(p)), nothing)
+    selection(first(p), b=true, r=renaming(last(p)), t=nothing)
 end
 
 translate_types(x) = selection(x)
@@ -108,7 +108,7 @@ function translate_types(p::AbstractVector{<:Pair{Pair{S, T}, AbstractRenaming}}
     )
 end
 
-function translate_types(p::AbstractVector{<:Pair{S, Pair{T, AbstractRenaming}}}) where {
+function translate_types(p::AbstractVector{<:Pair{S, <:Pair{T, AbstractRenaming}}}) where {
         S,
         T <: Union{AbstractTransformation,Base.Callable}
     }
@@ -157,3 +157,19 @@ struct SelectionQuery
 end
 
 selection_query(s) = SelectionQuery(mapfoldl(translate_types, OrSelection, [s...]))
+
+function _print_node(io, s::AbstractSelection, mark, prefix, islast)
+    println(io, prefix, "$(mark)── " , s)
+end
+
+function _print_node(io, s::AbstractMultiSelection, mark, prefix, islast)
+    println(io, prefix, "$(mark)── ", typeof(s).name.name)
+    prefix *= islast ? "    " : "│    "
+    _print_node(io, s.s1, '├', prefix, false)
+    _print_node(io, s.s2, '└', prefix, true)
+end
+
+function Base.show(io::IO, s::SelectionQuery)
+    println(io, "SelectionQuery")
+    _print_node(io, s.s, '└', "", true)
+end
