@@ -4,7 +4,8 @@
 # We can skip all median calls.
 
 
-_resolve_leaf(tab, s) = SelectionPlan(_resolve(tab, s), s.r, s.t)
+_resolve_leaf(tab, s) = SelectionPlan(_resolve(tab, s), keyfunc(s), valfunc(t))
+_resolve_leaf(tab, s::ColumnCreation) = _resolve(tab, s)
 
 function _resolve(tab, s::OrSelection)
     res = union_results(tab, _resolve_leaf(tab, first(s)), _resolve_leaf(tab, last(s)))
@@ -103,6 +104,12 @@ function union_results(
     )
     out = []  # TODO: fix Any
     _union_results_inner!(tab, x, y, out)
+end
+
+function union_results(tab, x::ColumnCreation, y)
+end
+
+function union_results(tab, x, y::ColumnCreation)
 end
 
 # Intersection #####################################################################################

@@ -109,8 +109,10 @@ end
 # end
 
 _resolve(tab, s::AllSelection) = collect(colnames(tab))
-_resolve(tab, s::ColumnCreation) = ColumnCreation(_resolve(tab, s.s), s.t, _resolve(tab, s.n))
+_resolve(tab, s::ColumnCreation) = ColumnCreation(colnames(_resolve(tab, s.s)), s.t, colname(_resolve(tab, s.n)[1]))
+_resolve(tab, s::ColumnCreation{<:AbstractSelection,<:Any,Symbol}) = ColumnCreation(colnames(_resolve(tab, s.s)), s.t, s.n)
+
 
 # These needs to be resolved at later stage
-_resolve(tab, s::OtherSelection) = OtherSelection(_resolve(s.s), keyfunc(s), valfunc(s))
-_resolve(tab, s::ElseSelection) = ElseSelection(_resolve(s.s), keyfunc(s), valfunc(s))
+_resolve(tab, s::OtherSelection) = OtherSelection(_resolve(tab, selection(s.s)), keyfunc(s), valfunc(s))
+_resolve(tab, s::ElseSelection) = ElseSelection(_resolve(tab, selection(s.s)), keyfunc(s), valfunc(s))

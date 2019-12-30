@@ -120,6 +120,7 @@ function translate_types(p::AbstractVector{<:Pair{S, <:Pair{T, AbstractRenaming}
 end
 
 # Stopping criteria
+translate_types(x::ColumnCreation) = x
 translate_types(x::AbstractSelection) = x
 translate_types(p::Pair{S, R}) where {S <: AbstractSelection, R <: AbstractRenaming} = extend_selection(first(p), last(p), nothing)
 translate_types(p::Pair{S, T}) where {S <: AbstractSelection, T <: AbstractTransformation} = extend_selection(first(p), nothing, last(p))
@@ -158,7 +159,7 @@ end
 
 selection_query(s) = SelectionQuery(mapfoldl(translate_types, OrSelection, [s...]))
 
-function _print_node(io, s::AbstractSelection, mark, prefix, islast)
+function _print_node(io, s, mark, prefix, islast)
     println(io, prefix, "$(mark)── " , s)
 end
 
@@ -170,6 +171,6 @@ function _print_node(io, s::AbstractMultiSelection, mark, prefix, islast)
 end
 
 function Base.show(io::IO, s::SelectionQuery)
-    println(io, "SelectionQuery")
-    _print_node(io, s.s, '└', "", true)
+    println(io, "SelectionQuery:")
+    print(io, s)
 end

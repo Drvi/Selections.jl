@@ -9,6 +9,7 @@ abstract type AbstractContextSelection{R,T} <: AbstractSelection{R,T}; end
 bool(s::AbstractContextSelection) = true
 (Base.:!)(s::S) where S <: AbstractContextSelection = throw(ArgumentError(lowercase(string(S.name, "() cannot be negated."))))
 
+
 abstract type AbstractMultiSelection{R,T} <: AbstractSelection{R,T} end
 Base.first(s::AbstractMultiSelection) = s.s1
 Base.last(s::AbstractMultiSelection) = s.s2

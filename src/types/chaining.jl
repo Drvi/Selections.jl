@@ -60,3 +60,20 @@ for (MS, verb) in [(:AndSelection, "intersect"), (:SubSelection, "setdiff")]
             throw(ArgumentError(string("Cannot  ", verb, " when creating new columns")))
     end
 end
+
+function _print_node(io, s, mark, prefix, islast)
+    println(io, prefix, "$(mark)── " , s)
+end
+
+function _print_node(io, s::AbstractMultiSelection, mark, prefix, islast)
+    println(io, prefix, "$(mark)── ", typeof(s).name.name)
+    prefix *= islast ? "    " : "│    "
+    _print_node(io, first(s), '├', prefix, false)
+    _print_node(io, last(s), '└', prefix, true)
+end
+
+function Base.show(io::IO, s::AbstractMultiSelection)
+    println(io, typeof(s).name.name)
+    _print_node(io, first(s), '├', "", false)
+    _print_node(io, last(s), '└', "", true)
+end

@@ -6,31 +6,6 @@ const MaybeRenaming = Union{Nothing,AbstractRenaming}
 const MaybeTrans = Union{Nothing,AbstractTransformation}
 const MaybeComp = Union{Nothing,Composition}
 
-# struct SelectionQuery{S<:QueryKeys, R<:MaybeRenaming, T<:MaybeTrans} <: AbstractMetaSelection
-#     s::S
-#     r::R
-#     t::T
-# end
-# SelectionQuery(s::SelectionQuery) = s
-# SelectionQuery(s::S) where {S<:QueryKeys} = SelectionQuery(s, nothing, nothing)
-#
-# SelectionQuery(s::S, r::R) where {S<:QueryKeys, R<:MaybeRenaming} =
-#     SelectionQuery(x, r, nothing)
-# SelectionQuery(p::Pair{S,R}) where {S<:QueryKeys, R<:MaybeRenaming} =
-#     SelectionQuery(first(p), last(p), nothing)
-#
-# SelectionQuery(s::S, t::T) where {S<:QueryKeys, T<:MaybeTrans} =
-#     SelectionQuery(x, nothing, t)
-# SelectionQuery(p::Pair{S,T}) where {S<:QueryKeys, T<:MaybeTrans} =
-#     SelectionQuery(first(p), nothing, last(p))
-#
-# SelectionQuery(s::S, t::T, r::R) where {S<:QueryKeys, R<:Renaming, T<:Trans} =
-#     SelectionQuery(s, r, t)
-# SelectionQuery(p::Pair{S,Pair{R,T}}) where {S<:QueryKeys, R<:MaybeRenaming, T<:MaybeTrans} =
-#     SelectionQuery(first(p), first(last(p)), last(last(p)))
-# SelectionQuery(p::Pair{S,Pair{T,R}}) where {S<:QueryKeys, R<:MaybeRenaming, T<:MaybeTrans} =
-#     SelectionQuery(first(p), last(last(p)), first(last(p)))
-
 struct SelectionTerm{S<:TermKeys, R<:MaybeComp, T<:MaybeComp} <: AbstractMetaSelection
     s::S
     r::R
@@ -42,6 +17,15 @@ valfunc(s::SelectionTerm) = s.t
 Base.iterate(s::SelectionTerm) = (colname(s), (keyfunc(s), valfunc(s)))
 Base.iterate(s::SelectionTerm, state) = (first(state), Base.tail(state))
 Base.iterate(s::SelectionTerm, ::Type{Tuple}) = nothing
+function Base.show(io::IO, s::SelectionTerm)
+    print(io,
+        "SelectionTerm(",
+        repr(colname(s)),
+        isnothing(keyfunc(s)) ? "" : " => $(keyfunc(s))",
+        isnothing(valfunc(s)) ? "" : " => $(valfunc(s))",
+        ")"
+    )
+end
 
 struct SelectionPlan{S} <: AbstractVector{S}
     s::Vector{S}
@@ -52,7 +36,7 @@ Base.getindex(s::SelectionPlan, i) = getindex(s.s, i)
 Base.iterate(x::SelectionPlan) = iterate(x.s)
 Base.iterate(x::SelectionPlan, state) = iterate(x.s, state)
 function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, s::SelectionPlan)
-    print(io, length(s.s), "-element SelectionPlan\n")
+    println(io, length(s.s), "-element SelectionPlan")
     foreach(x->println(io, " ", x), s.s)
 end
 

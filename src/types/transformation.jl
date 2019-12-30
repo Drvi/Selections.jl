@@ -74,12 +74,15 @@ struct ColumnCreation{S,T,N}
     t::T
     n::N
     function ColumnCreation(s::S, t::T, n::N) where {
-            S<:Union{Symbol,ElementSelection},
+            S<:Union{Symbol,<:AbstractVector{Symbol},ElementSelection},
             T<:AbstractTransformation,
             N<:Union{RenamingSymbol,RenamingFunction,Symbol}
         }
         new{S,T,N}(s,t,n)
     end
+end
+function Base.show(io::IO, x::ColumnCreation)
+    print(io, "ColumnCreation(", repr(x.s), ", ", x.t, ", ", repr(x.n), ")")
 end
 
 struct ColumnCreations{S,T,N}
