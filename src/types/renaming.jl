@@ -49,7 +49,7 @@ function alias(
     ;
     prefix::Nothing=nothing,
     suffix::Nothing=nothing)
-    throw(ArgumentError("Empty aliasing is not supported"))
+    throw(MethodError(alias, ()))
 end
 
 function alias(

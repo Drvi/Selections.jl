@@ -27,7 +27,7 @@ struct ArraySelection{S,R,T} <: AbstractSelection{R,T} where S<:Union{Int,Symbol
     end
 end
 ArraySelection(s::Tuple{Vararg{S}}, b::Bool=true, r::R=nothing, t::T=nothing) where {S<:Union{Int,Symbol},R,T} =
-    ArraySelection(collect(unique(s)), b, r, t)
+    ArraySelection(collect(s), b, r, t)
 
 struct RangeSelection{S,R,T} <: AbstractSelection{R,T} where S <: Union{Int,Symbol}
     start::S
